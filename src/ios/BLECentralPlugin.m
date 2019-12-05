@@ -456,13 +456,36 @@
 
     [peripherals addObject:peripheral];
     [peripheral setAdvertisementData:advertisementData RSSI:RSSI];
-
-    if (discoverPeripheralCallbackId) {
-        CDVPluginResult *pluginResult = nil;
-        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:[peripheral asDictionary]];
-        NSLog(@"Discovered %@", [peripheral asDictionary]);
-        [pluginResult setKeepCallbackAsBool:TRUE];
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:discoverPeripheralCallbackId];
+    NSData *data = [advertisementData objectForKey:@"kCBAdvDataManufacturerData"];
+    NSString *mac = [self dataToHexString: data];
+    if ([mac hasPrefix:@"0102"] && data.length >= 8) {
+        
+        NSData *macdata = [data subdataWithRange:NSMakeRange(2, 6)];
+        NSMutableString *allMac = [NSMutableString string];
+        
+        for (int i = 0; i < macdata.length; i++) {
+            NSData *dt = [macdata subdataWithRange:NSMakeRange(i, 1)];
+            NSString *str = [[self dataToHexString:dt]uppercaseString];
+            if (i == 0) {
+                [allMac appendString:str];
+            }else{
+                [allMac appendString:@":"];
+                [allMac appendString:str];
+            }
+        }
+        
+        NSDictionary *dict = @{
+                               @"device":peripheral,
+                               @"rssi":RSSI.stringValue,
+                               @"mac":allMac
+                               };
+        if (discoverPeripheralCallbackId) {
+            CDVPluginResult *pluginResult = nil;
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary: dict];
+            NSLog(@"Discovered %@", [peripheral asDictionary]);
+            [pluginResult setKeepCallbackAsBool:TRUE];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:discoverPeripheralCallbackId];
+        }
     }
 }
 
@@ -936,6 +959,26 @@
         [uuids addObject:uuid];
     }
     return uuids;
+}
+
+#pragma -mark 十六进制转换成字符串
+-(NSString*)dataToHexString:(NSData*)data {
+    if (data == nil) {
+        return @"";
+    }
+    Byte *dateByte = (Byte *)[data bytes];
+    
+    NSString *hexStr=@"";
+    for(int i=0;i<[data length];i++) {
+        NSString *newHexStr = [NSString stringWithFormat:@"%x",dateByte[i]&0xff]; ///16进制数
+        if([newHexStr length]==1){
+            hexStr = [NSString stringWithFormat:@"%@0%@",hexStr,newHexStr];
+        }
+        else{
+            hexStr = [NSString stringWithFormat:@"%@%@",hexStr,newHexStr];
+        }
+    }
+    return hexStr;
 }
 
 @end
