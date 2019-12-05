@@ -475,7 +475,11 @@
         }
         
         NSDictionary *dict = @{
-                               @"device":peripheral,
+                               @"device":[peripheral asDictionary],
+                               @"advertising": peripheral.advertising,
+                               @"name": peripheral.name,
+                               @"id": [peripheral.identifier UUIDString],
+                               @"name": peripheral.name,
                                @"rssi":RSSI.stringValue,
                                @"mac":allMac
                                };
